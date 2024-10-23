@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def detect_onset(series: pd.Series, mean: float, sigma: float, window: int = 30, critical_value: float = 2) -> pd.Timestamp | None:
+def detect_onset(series: pd.Series, mean: float, sigma: float, window: int, critical_value: float = 2.0) -> pd.Timestamp | None:
     """
     Detects the onset time of an anomaly in a time series based on a CUSUM-like algorithm. Can be used for solar energetic particle detection.
 

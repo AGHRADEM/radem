@@ -31,6 +31,7 @@ def save_hdf5(path: Path, df_p: pd.DataFrame, df_e: pd.DataFrame, df_d: pd.DataF
 
 def load_hdf5(path: Path):
     dataframes = {}
+    column_order = ['time', 'bin', 'value']
 
     with h5py.File(path, 'r') as hdf5_file:
         for group_name in hdf5_file.keys():
@@ -47,6 +48,8 @@ def load_hdf5(path: Path):
                     data[dataset_name] = dataset
             
             dataframes[group_name] = pd.DataFrame(data)
+            dataframes[group_name] = dataframes[group_name][column_order]
+
 
     df_p = dataframes.get('protons')
     df_e = dataframes.get('electrons')

@@ -3,16 +3,6 @@ import numpy as np
 from scipy.stats import zscore
 
 def intervals_from_mask(mask, signal):
-    """
-    Extracts contiguous intervals of True values from a mask.
-
-    Parameters:
-    - mask (pd.Series): Boolean mask where True indicates an anomaly.
-    - signal (pd.DataFrame): Original signal DataFrame with a "time" column.
-
-    Returns:
-    - List of tuples: Each tuple contains (start_time, end_time) for an anomalous interval.
-    """
     intervals = []
     start_idx = None
 
@@ -34,20 +24,6 @@ def intervals_from_mask(mask, signal):
 
 
 def autosplit_gauss_mask(background_noise, signal, window_size, threshold):
-    """
-    Detects anomalies in signal data based on rolling window z-score comparison with background noise.
-    Creates a mask for the entire signal, marking rows as True if they belong to an anomaly.
-
-    Parameters:
-    - background_noise (pd.DataFrame): DataFrame containing background noise data in a column named "value".
-    - signal (pd.DataFrame): DataFrame containing signal data with columns "time" and "value".
-    - window_size (int): The size of the rolling window.
-    - threshold (float): The z-score threshold to determine anomalies.
-
-    Returns:
-    - pd.Series: Boolean mask with True for rows in the signal DataFrame that are part of an anomaly.
-    """
-
     noise_mean = background_noise["value"].mean()
     noise_std = background_noise["value"].std()
 
@@ -66,4 +42,26 @@ def autosplit_gauss_mask(background_noise, signal, window_size, threshold):
 
 def autosplit_gauss(background_noise, signal, window_size=2*24*60, threshold=2):
     mask = autosplit_gauss_mask(background_noise, signal, window_size, threshold)
+    return intervals_from_mask(mask, signal)
+
+
+def autosplit_poisson_mask(background_noise, signal, window_size, threshold):
+    p_lambda = background_noise["value"].mean()
+
+    mask = pd.Series(False, index=signal.index)
+
+    for i in range(len(signal) - window_size + 1):
+        window = signal["value"].iloc[i : i + window_size]
+
+        window_mean = window.mean()
+        z_score = (window_mean - p_lambda) / np.sqrt(p_lambda / window_size)
+
+        if abs(z_score) > threshold:
+            mask.iloc[i : i + window_size] = True
+
+    return mask
+
+
+def autosplit_poisson(background_noise, signal, window_size=2*24*60, threshold=2):
+    mask = autosplit_poisson_mask(background_noise, signal, window_size, threshold)
     return intervals_from_mask(mask, signal)

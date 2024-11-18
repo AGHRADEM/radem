@@ -5,6 +5,7 @@ from scipy.stats import zscore
 def autosplit_gauss(background_noise, signal, window_size=50, threshold=3):
     """
     Detects anomalies in signal data based on rolling window z-score comparison with background noise.
+    Marks the entire window as anomalous if an anomaly is detected.
 
     Parameters:
     - background_noise (pd.DataFrame): DataFrame containing background noise data in a column named "value".
@@ -15,15 +16,14 @@ def autosplit_gauss(background_noise, signal, window_size=50, threshold=3):
     Returns:
     - List of tuples with (start_time, end_time) indicating detected anomaly periods.
     """
-    
+
     # Calculate mean and std of background noise
     noise_mean = background_noise["value"].mean()
     noise_std = background_noise["value"].std()
 
     # Initialize list to store anomaly periods
     anomalies = []
-    is_anomaly = False
-    start_index = None
+    current_anomaly_start = None
 
     # Rolling window through signal data
     for i in range(len(signal) - window_size + 1):
@@ -36,20 +36,29 @@ def autosplit_gauss(background_noise, signal, window_size=50, threshold=3):
 
         # Check if the z-score indicates an anomaly
         if abs(z_score) > threshold:
-            if not is_anomaly:  # Start of a new anomaly period
-                is_anomaly = True
-                start_index = i
+            # If this is the start of an anomaly period, record it
+            if current_anomaly_start is None:
+                current_anomaly_start = i
         else:
-            if is_anomaly:  # End of an anomaly period
-                start_time = signal["time"].iloc[start_index]
+            # If an anomaly period ends, finalize the current anomaly
+            if current_anomaly_start is not None:
+                start_time = signal["time"].iloc[current_anomaly_start]
                 end_time = signal["time"].iloc[i + window_size - 1]
                 anomalies.append((start_time, end_time))
-                is_anomaly = False
+                current_anomaly_start = None
 
     # If an anomaly is ongoing at the end, close it
-    if is_anomaly:
-        start_time = signal["time"].iloc[start_index]
+    if current_anomaly_start is not None:
+        start_time = signal["time"].iloc[current_anomaly_start]
         end_time = signal["time"].iloc[len(signal) - 1]
         anomalies.append((start_time, end_time))
 
-    return anomalies
+    # Merge overlapping or adjacent anomaly periods
+    merged_anomalies = []
+    for start, end in anomalies:
+        if merged_anomalies and merged_anomalies[-1][1] >= start:
+            merged_anomalies[-1] = (merged_anomalies[-1][0], max(merged_anomalies[-1][1], end))
+        else:
+            merged_anomalies.append((start, end))
+
+    return merged_anomalies

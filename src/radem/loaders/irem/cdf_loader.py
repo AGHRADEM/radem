@@ -45,7 +45,6 @@ def read_irem_cdfs(data_dir: Path,
             continue
 
         cdf = read_cdf(filename)
-        print(filename)
         if cdf:
             cdfs.append(cdf)
     return cdfs

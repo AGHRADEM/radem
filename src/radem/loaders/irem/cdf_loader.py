@@ -7,9 +7,11 @@ from datetime import datetime, date
 from typing import List, Tuple, Optional
 
 
-def filename_to_date(filename: str) -> date:
+def filename_to_date(filename: str | Path) -> date:
+    filename = str(filename.name)
+
     date_str = filename[10:18]
-    file_date = datetime.strptime(date_str, "%Y%m%d")
+    file_date = datetime.strptime(date_str, "%Y%m%d").date()
     return file_date
 
 
@@ -28,21 +30,22 @@ def is_filename_before_date(filename: str,
 def read_cdf(cdf_path: Path) -> Optional[pycdf.CDF]:
     if not cdf_path.stat().st_size:
         return None
-    return pycdf.CDF(str(cdf_path))
+    return pycdf.CDF(str(cdf_path), readonly=True)
 
 
 def read_irem_cdfs(data_dir: Path,
-                   from_date: Optional[datetime] = None,
-                   to_date: Optional[datetime] = None) -> List[pycdf.CDF]:
+                   from_date: Optional[date] = None,
+                   to_date: Optional[date] = None) -> List[pycdf.CDF]:
     cdfs = []
     for filename in sorted(data_dir.glob("*.cdf")):
-        if from_date and not is_filename_after_date(filename):
+        if from_date and is_filename_before_date(filename, from_date):
             continue
 
-        if to_date and not is_filename_before_date(filename):
+        if to_date and is_filename_after_date(filename, to_date):
             continue
 
         cdf = read_cdf(filename)
+        print(filename)
         if cdf:
             cdfs.append(cdf)
     return cdfs
@@ -107,14 +110,16 @@ def process_irem_d3(cdf: pycdf.CDF) -> pd.DataFrame:
     return process_irem_particles(cdf, 11, 15)
 
 
-def irem_cdf_to_df(cdfs: List[pycdf.CDF], process_irem_fn) -> None:
+def irem_cdf_to_df(cdfs: List[pycdf.CDF], process_irem_fn) -> pd.DataFrame:
     df = pd.concat(process_irem_fn(cdf) for cdf in cdfs)
     standardize_irem_df(df)
     return df
 
 
-def load_science_cdfs(directory: Path, from_date, to_date) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    science_cdfs = read_irem_cdfs(directory)
+def load_science_cdfs(data_dir: Path,
+                      from_date: Optional[date] = None,
+                      to_date: Optional[date] = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    science_cdfs = read_irem_cdfs(data_dir, from_date, to_date)
 
     df_d1 = irem_cdf_to_df(science_cdfs, process_irem_d1)
     df_d2 = irem_cdf_to_df(science_cdfs, process_irem_d2)

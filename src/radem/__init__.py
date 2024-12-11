@@ -1,3 +1,3 @@
-from . import events, loaders
+from . import events, handlers
 
-__all__ = ['events', 'loaders']
+__all__ = ['events', 'handlers']

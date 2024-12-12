@@ -66,6 +66,13 @@ def convert_irem_cdf_to_df(cdf: pycdf.CDF) -> pd.DataFrame:
         "d3_channel2":  cdf["COUNTRATE"][..., 12],
         "d3_channel3":  cdf["COUNTRATE"][..., 13],
         "d3_channel4":  cdf["COUNTRATE"][..., 14],
+        "orbit_x_eci_km":  cdf["ORBIT"][..., 0],
+        "orbit_y_eci_km":  cdf["ORBIT"][..., 1],
+        "orbit_z_eci_km":  cdf["ORBIT"][..., 2],
+        "magfield_bx_eci_gauss":  cdf["MAGFIELD"][..., 0],
+        "magfield_by_eci_gauss":  cdf["MAGFIELD"][..., 1],
+        "magfield_bz_eci_gauss":  cdf["MAGFIELD"][..., 2],
+        "magfield_lshell_re":  cdf["LSHELL"][..., 0],
     })
 
     # Raw CDFs might contain duplicates, so we need to drop them
